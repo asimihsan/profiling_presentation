@@ -1,0 +1,90 @@
+@import url(http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,600,700,900,400italic,600italic,700italic,900italic&subset=latin,latin-ext);
+@import url(http://fonts.googleapis.com/css?family=Inconsolata:400,700&subset=latin,latin-ext);
+
+slide:not(.segue) h2,
+slide:not(.segue) h3,
+slides slide.large article p,
+article p, article li, article li.build {
+    font-family: 'Source Sans Pro', 'Helvetica', 'Crimson Text', 'Garamond', 'Palatino', sans-serif;
+}
+
+slide,
+code,
+slides > slide.backdrop,
+.overview slides slide {
+    background: #fdfdfa !important;
+}
+
+slide:not(.segue) h2 code {
+    color: #CC2904;
+}
+
+pre code {
+    font-family: Consola, Monaco, 'Inconsolata', Menlo, monospace;
+}
+
+.constrain_code code {
+    max-height: 500px;
+    overflow: auto;
+}
+
+slides slide.large article p {
+    font-size: 52px;
+    font-style: normal;
+    font-weight: bold;
+    line-height: 1.2em;
+}
+
+slides > slide > hgroup + article p {
+    margin-bottom: 0;
+}
+
+article p, article li, article li.build {
+    font-size: 32px;
+    text-align: left;
+}
+
+blockquote {
+    padding-left: 1em;
+    margin-bottom: 1em;
+    border-left: 3px solid #ccc;
+    font-style: italic;
+}
+
+article strong {
+    font-weight: bold;
+}
+
+article em {
+    font-style: italic;
+}
+
+slide img {
+    max-width: 100%;
+}
+
+/* Contents page and indication of location */
+
+.contents_section_1 ul li:nth-child(1) { font-weight: bold; }
+.contents_section_1 ul li:not(:nth-child(1)) { opacity: 0.5; }
+
+.contents_section_2 ul li:nth-child(2) { font-weight: bold; }
+.contents_section_2 ul li:not(:nth-child(2)) { opacity: 0.5; }
+.contents_section_2 ul li:nth-child(-n+1) { text-decoration: line-through; }
+
+.contents_section_3 ul li:nth-child(3) { font-weight: bold; }
+.contents_section_3 ul li:not(:nth-child(3)) { opacity: 0.5; }
+.contents_section_3 ul li:nth-child(-n+2) { text-decoration: line-through; }
+
+.contents_section_4 ul li:nth-child(4) { font-weight: bold; }
+.contents_section_4 ul li:not(:nth-child(4)) { opacity: 0.5; }
+.contents_section_4 ul li:nth-child(-n+3) { text-decoration: line-through; }
+
+.contents_section_5 ul li:nth-child(5) { font-weight: bold; }
+.contents_section_5 ul li:not(:nth-child(5)) { opacity: 0.5; }
+.contents_section_5 ul li:nth-child(-n+4) { text-decoration: line-through; }
+
+.contents_section_6 ul li:nth-child(6) { font-weight: bold; }
+.contents_section_6 ul li:not(:nth-child(6)) { opacity: 0.5; }
+.contents_section_6 ul li:nth-child(-n+5) { text-decoration: line-through; }
+
