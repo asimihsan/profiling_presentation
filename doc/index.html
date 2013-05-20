@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Profiling in Python</title>
+  <meta charset="utf-8">
+  <meta name="description" content="Profiling in Python">
+  <meta name="author" content="Asim Ihsan">
+  <meta name="generator" content="slidify" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/default.css" media="all" >
+  <link rel="stylesheet" href="libraries/frameworks/io2012/phone.css" 
+    media="only screen and (max-device-width: 480px)" >
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/slidify.css" >
+  <link rel="stylesheet" href="libraries/highlighters/highlight.js/css/tomorrow.css" />
+  <base target="_blank"> <!-- This amazingness opens all links in a new tab. -->
+  <script data-main="libraries/frameworks/io2012/js/slides" 
+    src="libraries/frameworks/io2012/js/require-1.0.8.min.js">
+  </script>
+  
+    <link rel="stylesheet" href = "assets/css/aicustom1.css">
+<link rel="stylesheet" href = "assets/css/ribbons.css">
+
+</head>
+<body style="opacity: 0">
+  <slides class="layout-widescreen">
+    
+    <!-- LOGO SLIDE -->
+    <!-- END LOGO SLIDE -->
+    
+
+    <!-- TITLE SLIDE -->
+    <!-- Should I move this to a Local Layout File? -->
+    <slide class="title-slide segue nobackground">
+      <hgroup class="auto-fadein">
+        <h1>Profiling in Python</h1>
+        <h2></h2>
+        <p>Asim Ihsan<br/>(use arrow keys or space bar to advance, 'O' for overview)</p>
+      </hgroup>
+          </slide>
+
+    <!-- SLIDES -->
+      <slide class="" id="slide-1" style="background:;">
+  <hgroup>
+    <h2>Contents</h2>
+  </hgroup>
+  <article>
+    <ul>
+<li>  What, why</li>
+<li>  Time - where, how often</li>
+<li>  Memory - how much, of what type</li>
+<li>  Web frameworks</li>
+<li>  Extra slides</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="contents_section_1" id="slide-2" style="background:;">
+  <hgroup>
+    <h2>Contents</h2>
+  </hgroup>
+  <article>
+    <ul>
+<li>  What, why</li>
+<li>  Time - where, how often</li>
+<li>  Memory - how much, of what type</li>
+<li>  Web frameworks</li>
+<li>  Extra slides</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-3" style="background:;">
+  <hgroup>
+    <h2>What, why</h2>
+  </hgroup>
+  <article>
+    <ul>
+<li>  Want to know <em>what</em> a programme is doing
+
+<ul>
+<li>  Debugging</li>
+<li>  Optimisation</li>
+</ul></li>
+<li>  <strong>Deterministic</strong> vs. <strong>statistical</strong> profiling</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-4" style="background:;">
+  <hgroup>
+    <h2>Our code example - log parsing</h2>
+  </hgroup>
+  <article>
+    <ul>
+<li><p>Input: bzip-compressed log file.</p>
+
+<ul>
+<li><p>Format: <code>epoch,metric,value</code></p>
+
+<pre><code>1362331306,cpu_usage,74
+1362331307,memory_usage,1396
+1362331308,cpu_usage,13
+...
+</code></pre></li>
+</ul></li>
+<li><p>Output: arithmetic mean of CPU usage.</p>
+
+<ul>
+<li>  Metric = <code>cpu_usage</code></li>
+</ul></li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-5" style="background:;">
+  <hgroup>
+    <h2>Code caveat</h2>
+  </hgroup>
+  <article>
+    <ul>
+<li>  This purpose of this presentation <strong>is not</strong> &quot;how do I parse this log file the fastest?&quot;.
+
+<ul>
+<li>  The code that follows is <strong>deliberately obtuse and non-idiomatic</strong>.</li>
+</ul></li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-6" style="background:;">
+  <hgroup>
+    
+  </hgroup>
+  <article>
+    <pre><code class="python">re_log_line = re.compile(&quot;(.*?),(.*?),(.*)\n&quot;)
+
+def main():
+    cpu_usages = []
+    with contextlib.closing(bz2.BZ2File(log_filepath)) as f_in:
+        for line in f_in:
+            process_line(line, cpu_usages)
+    summarise(cpu_usages)
+
+def summarise(cpu_usages):
+    print &quot;avg: %s&quot; % (sum(cpu_usages) / len(cpu_usages), )
+
+def process_line(line, cpu_usages):
+    re_obj = re_log_line.search(line)
+    try:
+        elems = re_obj.groups()
+    except:
+        pass
+    else:
+        if elems[1] == &quot;cpu_usage&quot;:
+            cpu_usages.append(int(elems[2]))
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="contents_section_2" id="slide-7" style="background:;">
+  <hgroup>
+    <h2>Contents</h2>
+  </hgroup>
+  <article>
+    <ul>
+<li>  What, why</li>
+<li>  Time - where, how often</li>
+<li>  Memory - how much, of what type</li>
+<li>  Web frameworks</li>
+<li>  Extra slides</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-8" style="background:;">
+  <hgroup>
+    <h2>Time</h2>
+  </hgroup>
+  <article>
+    <ul>
+<li>  <code>cProfile</code> is a great built-in deterministic profiler.
+
+<ul>
+<li>  <strong>deterministic</strong> \(\Rightarrow\) comprehensive; observer effect!</li>
+</ul></li>
+<li>  <code>kcachegrind</code> is the most user-friendly way to explore call graphs.</li>
+<li>  <code>line_profiler</code> has even higher overhead, but allows you line-by-line insight.</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-9" style="background:;">
+  <hgroup>
+    <h2><code>cProfile</code> from CLI</h2>
+  </hgroup>
+  <article>
+    <pre><code>python -m cProfile -o profile.stats parse_log.py
+</code></pre>
+
+<ul>
+<li>  Outputs <code>profile.stats</code> to current directory.</li>
+<li>  Can get a list of &quot;hot functions&quot; quite easily:</li>
+</ul>
+
+<pre><code>python -c &quot;import pstats; p = pstats.Stats(&#39;profile.stats&#39;); p.sort_stats(&#39;time&#39;).print_stats(5)&quot;
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+  5000000   12.930    0.000   23.044    0.000 cpu_profiling/parse_log.py:31(process_line)
+        1    8.666    8.666   31.756   31.756 cpu_profiling/parse_log.py:21(main)
+  5000000    7.917    0.000    7.917    0.000 {method &#39;search&#39; of &#39;_sre.SRE_Pattern&#39; objects}
+  5000000    1.621    0.000    1.621    0.000 {method &#39;groups&#39; of &#39;_sre.SRE_Match&#39; objects}
+  5000065    0.575    0.000    0.575    0.000 {method &#39;append&#39; of &#39;list&#39; objects}
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-10" style="background:;">
+  <hgroup>
+    
+  </hgroup>
+  <article>
+    <pre><code>   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+  5000000   12.930    0.000   23.044    0.000 cpu_profiling/parse_log.py:31(process_line)
+        1    8.666    8.666   31.756   31.756 cpu_profiling/parse_log.py:21(main)
+  5000000    7.917    0.000    7.917    0.000 {method &#39;search&#39; of &#39;_sre.SRE_Pattern&#39; objects}
+  5000000    1.621    0.000    1.621    0.000 {method &#39;groups&#39; of &#39;_sre.SRE_Match&#39; objects}
+  5000065    0.575    0.000    0.575    0.000 {method &#39;append&#39; of &#39;list&#39; objects}
+</code></pre>
+
+<ul>
+<li>  Program took 31.756s to run.</li>
+<li>  <strong><code>tottime</code></strong>: total time spent in function <em>excluding</em> calls to subfunctions.</li>
+<li>  <strong><code>cumtime</code></strong>: total time spent in function <em>including</em> calls to subfunctions.</li>
+<li>  Note the obvious for <code>main</code>, that <code>cumtime = percall</code> and <code>ncalls = 1</code>.</li>
+<li>  Top three functions take \(\frac{12.930+8.666+7.917}{31.756} \times 100 = 92.9\%\) of time.</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-11" style="background:;">
+  <hgroup>
+    
+  </hgroup>
+  <article>
+    <pre><code>   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+  5000000   12.930    0.000   23.044    0.000 cpu_profiling/parse_log.py:31(process_line)
+  5000000    7.917    0.000    7.917    0.000 {method &#39;search&#39; of &#39;_sre.SRE_Pattern&#39; objects}
+  5000000    1.621    0.000    1.621    0.000 {method &#39;groups&#39; of &#39;_sre.SRE_Match&#39; objects}
+  5000065    0.575    0.000    0.575    0.000 {method &#39;append&#39; of &#39;list&#39; objects}
+
+def process_line(line, cpu_usages):
+    re_obj = re_log_line.search(line)
+    try:
+        elems = re_obj.groups()
+    except:
+        pass
+    else:
+        if elems[1] == &quot;cpu_usage&quot;:
+            cpu_usages.append(int(elems[2]))
+</code></pre>
+
+<ul>
+<li>  <code>process_line</code> takes \(\frac{12.930}{31.756} \times 100 = 40.7\%\) of the time <strong>excluding</strong> calls to subfunctions.</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-12" style="background:;">
+  <hgroup>
+    
+  </hgroup>
+  <article>
+    <pre><code>   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    8.666    8.666   31.756   31.756 cpu_profiling/parse_log.py:21(main)
+
+def main():
+    cpu_usages = []
+    with contextlib.closing(bz2.BZ2File(log_filepath)) as f_in:
+        for line in f_in:
+            process_line(line, cpu_usages)
+    summarise(cpu_usages)
+</code></pre>
+
+<ul>
+<li>  <code>main</code> takes \(\frac{8.666}{31.756} \times 100 = 27.3\%\) of time, <strong>excluding</strong> calls to subfunctions.</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-13" style="background:;">
+  <hgroup>
+    <h2><code>kcachegrind</code></h2>
+  </hgroup>
+  <article>
+    <ul>
+<li>  Download KCachegrind source, build QT GUI called <code>QCachegrind</code>.</li>
+<li>  Generate a <code>cProfile</code> output file, as before.</li>
+<li>  <code>pip install pyprof2calltree</code></li>
+<li>  <code>pyprof2calltree -i profile.stats -o callgrind.output</code></li>
+<li>  Open <code>callgrind.output</code> in <code>QCachegrind</code></li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-14">
+<hgroup>
+  
+</hgroup>
+<article class = 'flexbox vcenter'>
+<p><img src="assets/img/01_qcachegrind.png" alt="QCachegrind screenshot"></p>
+
+</article>
+<!-- Presenter Notes -->
+</slide>
+      <slide class="" id="slide-15" style="background:;">
+  <hgroup>
+    <h2><code>line_profiler</code></h2>
+  </hgroup>
+  <article>
+    <pre><code class="python">(going_faster_with_python)Mill:src ai$ kernprof.py -l -v cpu_profiling/parse_log_line_profiler.py
+
+File: cpu_profiling/parse_log_line_profiler.py
+Function: main at line 21
+Total time: 105.217 s
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    21                                           @profile
+    22                                           def main():
+    23         1            2      2.0      0.0      cpu_usages = []
+    24         1           34     34.0      0.0      with contextlib.closing(bz2.BZ2File(log_filepath)) as f_in:
+    25   5000001     11602598      2.3     11.0          for line in f_in:
+    26   5000000     93565103     18.7     88.9              process_line(line, cpu_usages)
+    27         1        49088  49088.0      0.0      summarise(cpu_usages)
+</code></pre>
+
+<ul>
+<li>  Nothing surprising.<br></li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-16" style="background:;">
+  <hgroup>
+    
+  </hgroup>
+  <article>
+    <pre><code class="python">File: cpu_profiling/parse_log_line_profiler.py
+Function: process_line at line 32
+Total time: 44.2081 s
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    32                                           @profile
+    33                                           def process_line(line, cpu_usages):
+    34   5000000     14758591      3.0     33.4      re_obj = re_log_line.search(line)
+    35   5000000      4406648      0.9     10.0      try:
+    36   5000000      6765236      1.4     15.3          elems = re_obj.groups()
+    37                                               except:
+    38                                                   pass
+    39                                               else:
+    40   5000000      5814440      1.2     13.2          if elems[1] == &quot;cpu_usage&quot;:
+    41   5000000     12463137      2.5     28.2              cpu_usages.append(int(elems[2]))
+</code></pre>
+
+<ul>
+<li>  <code>try</code> takes up time, and line 41 is opaque</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="contents_section_3" id="slide-17" style="background:;">
+  <hgroup>
+    <h2>Contents</h2>
+  </hgroup>
+  <article>
+    <ul>
+<li>  What, why</li>
+<li>  Time - where, how often</li>
+<li>  Memory - how much, of what type</li>
+<li>  Web frameworks</li>
+<li>  Extra slides</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-18" style="background:;">
+  <hgroup>
+    <h2>Memory</h2>
+  </hgroup>
+  <article>
+    <ul>
+<li>  <code>pympler</code>, useful collection of modules</li>
+<li>  <code>memory_profiler</code> just like <code>line_profiler</code></li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="contents_section_4" id="slide-19" style="background:;">
+  <hgroup>
+    
+  </hgroup>
+  <article>
+    <pre><code class="python">import collections
+from pympler import tracker
+
+Point = collections.namedtuple(&quot;Point&quot;, [&quot;x&quot;, &quot;y&quot;])
+Line = collections.namedtuple(&quot;Line&quot;, [&quot;line_number&quot;, &quot;text&quot;])
+
+def get_point(i):
+    return Point(i, i)
+
+def get_line(i):
+    return Line(i, &quot;some random text&quot; * 100)
+
+def main():
+    points = [get_point(i) for i in xrange(100000)]
+    lines = [get_line(i) for i in xrange(10000)]
+
+if __name__ == &quot;__main__&quot;:
+    main()
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-20" style="background:;">
+  <hgroup>
+    <h2><code>pympler.tracker</code></h2>
+  </hgroup>
+  <article>
+    <ul>
+<li>  Using <code>pympler.tracker.SummaryTracker()</code> is simplest.</li>
+<li>  Instantiate, run code, then call <code>print_diff()</code>.</li>
+</ul>
+
+<pre><code class="python">from pympler import tracker
+
+def main():
+    tr = tracker.SummaryTracker()
+    points = [get_point(i) for i in xrange(100000)]
+    lines = [get_line(i) for i in xrange(10000)]
+    tr.print_diff()
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-21" style="background:;">
+  <hgroup>
+    <h2><code>pympler.tracker</code></h2>
+  </hgroup>
+  <article>
+    <pre><code>$ 03_memory/01_tracker_example.py 
+                   types |   # objects |   total size
+======================== | =========== | ============
+                     str |       10968 |     15.66 MB
+  &lt;class &#39;__main__.Point |      100000 |      6.87 MB
+                     int |      109724 |      2.51 MB
+                    list |         970 |    989.20 KB
+   &lt;class &#39;__main__.Line |       10000 |    703.12 KB
+                    dict |           1 |      1.02 KB
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-22" style="background:;">
+  <hgroup>
+    <h2><code>pympler.class_tracker</code></h2>
+  </hgroup>
+  <article>
+    <ul>
+<li>  Can filter by classes with another <code>pympler</code> module.</li>
+<li>  Note that it needs to use <code>weakref</code>&#39;s, so can&#39;t track <code>namedtuples</code>
+
+<ul>
+<li>  Something to do with using <code>__slots__</code>? I&#39;m not sure.</li>
+</ul></li>
+<li>  Change our example to use classes rather than named tuples</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-23" style="background:;">
+  <hgroup>
+    
+  </hgroup>
+  <article>
+    <pre><code class="python">class Point(object):
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+class Line(object):
+    def __init__(self, line_number, text):
+        self.line_number = line_number
+        self.text = text
+
+def main():
+    tracker = ClassTracker()
+    tracker.track_class(Point)
+    tracker.track_class(Line)
+    tracker.create_snapshot()
+
+    points = [get_point(i) for i in xrange(100000)]
+    lines = [get_line(i) for i in xrange(10000)]
+
+    tracker.create_snapshot()
+    tracker.stats.print_summary()
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-24" style="background:;">
+  <hgroup>
+    
+  </hgroup>
+  <article>
+    <pre><code>$ 03_memory/03_class_tracker.py 
+---- SUMMARY ------------------------------------------------------------------
+                                         active      0     B      average   pct
+  __main__.Line                               0      0     B      0     B    0%
+  __main__.Point                              0      0     B      0     B    0%
+                                         active      0     B      average   pct
+  __main__.Line                           10000     19.14 MB      1.96 KB    0%
+  __main__.Point                         100000     35.10 MB    368     B    1%
+-------------------------------------------------------------------------------
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-25" style="background:;">
+  <hgroup>
+    <h2><code>memory_profiler</code></h2>
+  </hgroup>
+  <article>
+    <ul>
+<li>  Decorate functions with <code>@profile</code>, then run with <code>memory_profiler</code> module.
+
+<ul>
+<li>  Just like <code>line_profiler</code>.</li>
+</ul></li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="" id="slide-26" style="background:;">
+  <hgroup>
+    
+  </hgroup>
+  <article>
+    <pre><code>$ python -m memory_profiler 03_memory/04_memory_profiler.py 
+Filename: 03_memory/04_memory_profiler.py
+
+Line #    Mem usage    Increment   Line Contents
+================================================
+    14                             @profile
+    15     8.434 MB     0.000 MB   def main():
+    16    30.953 MB    22.520 MB       lines = [get_line(i) for i in xrange(10000)]
+    17    42.812 MB    11.859 MB       points = [get_point(i) for i in xrange(100000)]
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="contents_section_5" id="slide-27" style="background:;">
+  <hgroup>
+    <h2>Contents</h2>
+  </hgroup>
+  <article>
+    <ul>
+<li>  What, why</li>
+<li>  Time - where, how often</li>
+<li>  Memory - how much, of what type</li>
+<li>  Web frameworks</li>
+<li>  Extra slides</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+      <slide class="large" id="slide-28">
+<hgroup>
+  
+</hgroup>
+<article class = 'flexbox vcenter'>
+<p>Thank you!  </p>
+
+</article>
+<!-- Presenter Notes -->
+</slide>
+    <slide class="backdrop"></slide>
+  </slides>
+
+  <!--[if IE]>
+    <script 
+      src="http://ajax.googleapis.com/ajax/libs/chrome-frame/1/CFInstall.min.js">  
+    </script>
+    <script>CFInstall.check({mode: 'overlay'});</script>
+  <![endif]-->
+</body>
+<!-- Grab CDN jQuery, fall back to local if offline -->
+<script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.min.js"></script>
+<script>window.jQuery || document.write('<script src="libraries/widgets/quiz/js/jquery-1.7.min.js"><\/script>')</script>
+<!-- Load Javascripts for Widgets -->
+<!-- MathJax: Fall back to local if CDN offline but local image fonts are not supported (saves >100MB) -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [['$','$'], ['\\(','\\)']],
+      processEscapes: true
+    }
+  });
+</script>
+<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/2.0-latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<!-- <script src="https://c328740.ssl.cf1.rackcdn.com/mathjax/2.0-latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script> -->
+<script>window.MathJax || document.write('<script type="text/x-mathjax-config">MathJax.Hub.Config({"HTML-CSS":{imageFont:null}});<\/script><script src="libraries/widgets/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML"><\/script>')
+</script>
+<!-- LOAD HIGHLIGHTER JS FILES -->
+<script src="libraries/highlighters/highlight.js/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<!-- DONE LOADING HIGHLIGHTER JS FILES -->
+</html>
