@@ -2,7 +2,7 @@
 
 import collections
 
-from pympler.classtracker import ClassTracker
+from pympler import tracker
 
 class Point(object):
     def __init__(self, x, y):
@@ -21,16 +21,12 @@ def get_line(i):
     return Line(i, "some random text" * 100)
 
 def main():
-    tracker = ClassTracker()
-    tracker.track_class(Point)
-    tracker.track_class(Line)
-    tracker.create_snapshot()
+    tr = tracker.SummaryTracker()
 
     points = [get_point(i) for i in xrange(1000000)]
     lines = [get_line(i) for i in xrange(100000)]
 
-    tracker.create_snapshot()
-    tracker.stats.print_summary()
+    tr.print_diff()
 
 if __name__ == "__main__":
     main()

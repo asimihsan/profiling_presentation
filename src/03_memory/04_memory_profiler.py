@@ -13,8 +13,8 @@ def get_line(i):
 
 @profile
 def main():
-    lines = [get_line(i) for i in xrange(10000)]
-    points = [get_point(i) for i in xrange(100000)]
+    lines = [get_line(i) for i in xrange(100000)]
+    points = [get_point(i) for i in xrange(1000000)]
 
 if __name__ == "__main__":
     main()
