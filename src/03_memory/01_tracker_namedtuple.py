@@ -16,8 +16,8 @@ def get_line(i):
 def main():
     tr = tracker.SummaryTracker()
 
-    points = [get_point(i) for i in xrange(100000)]
-    lines = [get_line(i) for i in xrange(10000)]
+    points = [get_point(i) for i in xrange(1000000)]
+    lines = [get_line(i) for i in xrange(100000)]
 
     tr.print_diff()
 

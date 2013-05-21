@@ -69,7 +69,7 @@ def summarise_results(results):
                               min=format_string % minimum,
                               Q1=format_string % percentile_25,
                               median=format_string % median,
-                              Q2=format_string % percentile_75,
+                              Q3=format_string % percentile_75,
                               max=format_string % maximum))
     print "Summary of %s runs" % len(results)
     pprinttable(table_data)
